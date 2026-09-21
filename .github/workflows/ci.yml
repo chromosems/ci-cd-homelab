@@ -34,3 +34,13 @@ jobs:
 
       - name: Run tests with coverage
         run: python -m pytest --cov=app --cov-report=term-missing
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ci-cd-homelab:latest .
