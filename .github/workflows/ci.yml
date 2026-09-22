@@ -44,3 +44,22 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t ci-cd-homelab:latest .
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            cd ~/ci-cd-homelab
+            git pull origin main
+            docker compose up --build -d
+            sleep 5
+            curl -f http://localhost/health || exit 1
+#Changes: added deploy job that SSH's into your EC2, pulls code, rebuilds container, and health-checks.

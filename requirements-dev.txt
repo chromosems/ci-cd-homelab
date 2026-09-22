@@ -5,3 +5,5 @@ pytest-cov
 ruff
 mypy
 pre-commit
+httpx
+#httpx is needed for testing FastAPI endpoints with TestClient.
