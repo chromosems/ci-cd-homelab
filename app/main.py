@@ -45,7 +45,7 @@ CACHE_SIZE = int(os.environ.get("CACHE_SIZE", "128"))
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 VALID_USERS = {
