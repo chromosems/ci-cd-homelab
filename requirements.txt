@@ -29,3 +29,6 @@ rank-bm25>=0.2.0
 
 # HTTP client (for Ollama)
 httpx>=0.25.0
+
+# Form data parsing (required by FastAPI OAuth2)
+python-multipart>=0.0.6
