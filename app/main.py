@@ -693,22 +693,22 @@ def parse_response(answer: str) -> dict:
     # Final fallback: regex parse for backward compatibility
     text = (answer or "").upper()
     if "REJECT" in text:
-        decision = "reject"
+        fallback_decision = "reject"
     elif "APPROVE" in text:
-        decision = "approve"
+        fallback_decision = "approve"
     elif "INSUFFICIENT" in text:
-        decision = "reject"
+        fallback_decision = "reject"
     else:
-        decision = "reject"  # Default to reject instead of neutral
+        fallback_decision = "reject"  # Default to reject instead of neutral
 
-    print(f"[DEBUG] Fallback parser used. Decision: {decision}")
+    print(f"[DEBUG] Fallback parser used. Decision: {fallback_decision}")
     raw = (answer or "").strip()
     if not raw:
         reason_text = "The model returned an empty response. This may indicate the prompt was too long or the model timed out."
     else:
         reason_text = _post_process_reason(raw)
     return {
-        "decision": decision,
+        "decision": fallback_decision,
         "confidence": "medium",
         "reason": reason_text,
         "cited_case_ids": [],
@@ -875,7 +875,7 @@ async def export_decision(req: QueryRequest, current_user: dict = Depends(get_cu
 @app.post("/batch-process")
 async def batch_process(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     """Process a CSV file of loan applications."""
-    if not file.filename.endswith(".csv"):
+    if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
     contents = await file.read()
