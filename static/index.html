@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoanAssist - RAG-Powered Loan Decisions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <div class="login-brand">
+          <div class="login-logo">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#00d4aa"/>
+              <path d="M12 20h16M20 12v16" stroke="#0a0e27" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1>LoanAssist</h1>
+          <p>RAG-Powered Loan Decision Support</p>
+        </div>
+        <div class="login-form">
+          <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="loanadmin" value="loanadmin">
+          </div>
+          <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter password">
+          </div>
+          <button class="btn-primary" onclick="login()">Sign In</button>
+          <div class="login-hint">
+            <span>Default: loanadmin / securepassword123</span>
+          </div>
+          <div class="error" id="loginError"></div>
+        </div>
+      </div>
+      <div class="login-bg-pattern"></div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appScreen" class="app-screen" style="display:none;">
+      <!-- Icon Rail Sidebar -->
+      <nav class="sidebar-rail" id="sidebarRail">
+        <div class="rail-top">
+          <div class="rail-brand" title="LoanAssist">
+            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#00d4aa"/>
+              <path d="M12 20h16M20 12v16" stroke="#0a0e27" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="rail-divider"></div>
+          <button class="rail-btn active" onclick="showPanel('chat')" title="Chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Chat</span>
+          </button>
+          <button class="rail-btn" onclick="toggleToolsDrawer('calculator')" title="Calculator">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+            <span>Calculator</span>
+          </button>
+          <button class="rail-btn" onclick="toggleToolsDrawer('batch')" title="Batch">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            <span>Batch</span>
+          </button>
+        </div>
+        <div class="rail-bottom">
+          <button class="rail-btn" onclick="clearChat()" title="Clear Chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Clear</span>
+          </button>
+          <button class="rail-btn rail-danger" onclick="logout()" title="Logout">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Logout</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Top Bar with Metrics -->
+        <header class="top-bar">
+          <div class="top-bar-left">
+            <h2>Loan Decision Chat</h2>
+            <div class="status-pill">
+              <span class="status-dot online" id="statusDot"></span>
+              <span id="agentStatusText">Online</span>
+            </div>
+          </div>
+          <div class="metrics-bar">
+            <div class="metric-pill">
+              <span class="metric-value" id="statTotal">0</span>
+              <span class="metric-label">Queries</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-value" id="statRAG">0</span>
+              <span class="metric-label">RAG</span>
+            </div>
+            <div class="metric-pill approve">
+              <span class="metric-value" id="statApprove">0</span>
+              <span class="metric-label">Approved</span>
+            </div>
+            <div class="metric-pill reject">
+              <span class="metric-value" id="statReject">0</span>
+              <span class="metric-label">Rejected</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-value" id="statAvg">0ms</span>
+              <span class="metric-label">Avg</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Sub Header -->
+        <div class="sub-header">
+          <div class="sub-left">
+            <span class="rag-indicator">
+              <span class="rag-dot"></span>
+              RAG Active
+            </span>
+            <span class="model-info" id="modelInfo">Loading...</span>
+            <span class="dataset-info" id="datasetInfo">Loading...</span>
+          </div>
+          <div class="sub-right">
+            <span class="mode-badge" id="headerModeBadge">Ready</span>
+          </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chatMessages">
+          <div class="welcome-message">
+            <div class="welcome-icon">
+              <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+                <rect width="40" height="40" rx="12" fill="rgba(0,212,170,0.1)"/>
+                <path d="M12 20h16M20 12v16" stroke="#00d4aa" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h4>Welcome to LoanAssist</h4>
+            <p>Your RAG-powered loan decision assistant. I analyze historical Ugandan loan cases to provide evidence-based recommendations.</p>
+            <div class="welcome-examples">
+              <p>Try asking:</p>
+              <ul>
+                <li>"Should we approve a UGX 5,000,000 business loan for a boda boda rider with Debt to Income Ratio 35%?"</li>
+                <li>"What interest rate for a teacher with credit score 650 in Kampala?"</li>
+                <li>"Show me repayment schedules for agricultural loans that defaulted"</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+          <div class="input-bar">
+            <div class="input-wrapper">
+              <textarea 
+                id="messageInput" 
+                placeholder="Ask about a loan decision..." 
+                rows="1"
+              ></textarea>
+              <button id="sendBtn" class="btn-send" onclick="sendMessage()" title="Send (Ctrl+Enter)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="input-meta">
+            <span id="charCount">0 characters</span>
+            <span class="divider">|</span>
+            <span id="ragStatus">RAG retrieval ready</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Slide-out Tools Drawer -->
+      <aside class="tools-drawer" id="toolsDrawer">
+        <div class="drawer-header">
+          <h3 id="drawerTitle">Tools</h3>
+          <button class="drawer-close" onclick="closeToolsDrawer()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="drawer-content">
+          <!-- Calculator -->
+          <div class="tool-section" id="calculatorSection" style="display:none;">
+            <div class="tool-intro">
+              <div class="tool-icon">📊</div>
+              <h4>Repayment Calculator</h4>
+              <p>Calculate amortization schedules for Ugandan shilling loans.</p>
+            </div>
+            <div class="calc-form">
+              <div class="calc-field">
+                <label>Loan Amount (UGX)</label>
+                <input type="number" id="calcAmount" placeholder="5000000" value="5000000">
+              </div>
+              <div class="calc-field">
+                <label>Interest Rate (% APR)</label>
+                <input type="number" id="calcRate" placeholder="20" value="20" step="0.1">
+              </div>
+              <div class="calc-field">
+                <label>Term (Months)</label>
+                <input type="number" id="calcTerm" placeholder="24" value="24">
+              </div>
+              <button class="btn-primary" onclick="calculateSchedule()">Calculate Schedule</button>
+            </div>
+            <div class="calc-results" id="calcResults" style="display:none;">
+              <div class="calc-summary">
+                <div class="calc-card">
+                  <span class="calc-label">Monthly Payment</span>
+                  <span class="calc-value" id="calcMonthly">-</span>
+                </div>
+                <div class="calc-card">
+                  <span class="calc-label">Total Repayment</span>
+                  <span class="calc-value" id="calcTotal">-</span>
+                </div>
+                <div class="calc-card">
+                  <span class="calc-label">Total Interest</span>
+                  <span class="calc-value" id="calcInterest">-</span>
+                </div>
+              </div>
+              <div class="table-container">
+                <table class="data-table" id="scheduleTable">
+                  <thead>
+                    <tr><th>Month</th><th>Payment</th><th>Principal</th><th>Interest</th><th>Balance</th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batch Upload -->
+          <div class="tool-section" id="batchSection" style="display:none;">
+            <div class="tool-intro">
+              <div class="tool-icon">📁</div>
+              <h4>Batch Processing</h4>
+              <p>Upload a CSV to process multiple loan applications at once.</p>
+            </div>
+            <div class="batch-form">
+              <p class="tool-hint">Required columns: customer_id, age, income_ugx, credit_score, loan_amount_ugx, loan_type, employment_status, debt_to_income_ratio, collateral</p>
+              <div class="file-input-wrapper">
+                <input type="file" id="batchFile" accept=".csv">
+              </div>
+              <button class="btn-primary" onclick="processBatch()">Process Batch</button>
+            </div>
+            <div class="batch-results" id="batchResults" style="display:none;">
+              <div class="batch-stats" id="batchStats"></div>
+              <div class="table-container">
+                <table class="data-table" id="batchTable">
+                  <thead>
+                    <tr><th>ID</th><th>Decision</th><th>Mode</th><th>Answer</th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Tools Drawer Backdrop -->
+      <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeToolsDrawer()"></div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-content">
+        <div class="spinner-ring"></div>
+        <p>Analyzing your request...</p>
+        <span class="loading-sub">Retrieving similar cases via RAG</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let token = localStorage.getItem('loan_token');
+    let messages = [];
+    let isProcessing = false;
+
+    if (token) {
+      showApp();
+      fetchHealth();
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+      errorEl.style.display = 'none';
+
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      try {
+        const res = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData
+        });
+
+        if (!res.ok) {
+          errorEl.textContent = 'Invalid username or password.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        const data = await res.json();
+        token = data.access_token;
+        localStorage.setItem('loan_token', token);
+        showApp();
+        fetchHealth();
+      } catch (err) {
+        errorEl.textContent = 'Network error. Is the server running?';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      token = null;
+      localStorage.removeItem('loan_token');
+      messages = [];
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appScreen').style.display = 'none';
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = 'flex';
+      fetchStats();
+    }
+
+    async function fetchHealth() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        const data = await res.json();
+        document.getElementById('modelInfo').textContent = data.model;
+        document.getElementById('datasetInfo').textContent = `${data.dataset_size} cases`;
+      } catch (e) {
+        document.getElementById('modelInfo').textContent = 'Unknown';
+        document.getElementById('datasetInfo').textContent = 'Unknown';
+      }
+    }
+
+    function clearChat() {
+      messages = [];
+      const chatMessages = document.getElementById('chatMessages');
+      chatMessages.innerHTML = `
+        <div class="welcome-message">
+          <div class="welcome-icon">
+            <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="12" fill="rgba(0,212,170,0.1)"/>
+              <path d="M12 20h16M20 12v16" stroke="#00d4aa" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h4>Welcome to LoanAssist</h4>
+          <p>Your RAG-powered loan decision assistant. I analyze historical Ugandan loan cases to provide evidence-based recommendations.</p>
+          <div class="welcome-examples">
+            <p>Try asking:</p>
+            <ul>
+              <li>"Should we approve a UGX 5,000,000 business loan for a boda boda rider with Debt to Income Ratio 35%?"</li>
+              <li>"What interest rate for a teacher with credit score 650 in Kampala?"</li>
+              <li>"Show me repayment schedules for agricultural loans that defaulted"</li>
+            </ul>
+          </div>
+        </div>
+      `;
+      document.getElementById('headerModeBadge').textContent = 'Ready';
+      document.getElementById('headerModeBadge').className = 'mode-badge';
+      closeToolsDrawer();
+    }
+
+    function parseDecision(text) {
+      const t = text.toUpperCase();
+      if (t.includes('REJECT')) return 'reject';
+      if (t.includes('APPROVE')) return 'approve';
+      return null;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function sanitizeText(text) {
+      if (!text) return '';
+      return text.replace(/\bDTI\b/g, 'Debt to Income Ratio');
+    }
+
+    function tryParseJsonReason(reason) {
+      // If backend fallback sent raw JSON, try to extract fields client-side
+      if (reason && reason.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(reason);
+          return {
+            decision: (parsed.decision || '').toLowerCase(),
+            confidence: (parsed.confidence || 'medium').toLowerCase(),
+            reason: sanitizeText(parsed.reason || reason),
+            cited_case_ids: parsed.cited_case_ids || [],
+            risk_factors: (parsed.risk_factors || []).map(sanitizeText),
+            comparison_summary: sanitizeText(parsed.comparison_summary || ''),
+          };
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    }
+
+    async function submitFeedback(extra, feedbackType, upBtn, downBtn) {
+      try {
+        const res = await fetch(`${API_BASE}/feedback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            query: extra.question,
+            decision: extra.decision || '',
+            confidence: extra.confidence || '',
+            reason: extra.reason || '',
+            cited_case_ids: extra.cited_case_ids || [],
+            feedback: feedbackType
+          })
+        });
+        if (res.ok) {
+          upBtn.disabled = true;
+          downBtn.disabled = true;
+          upBtn.classList.add('selected');
+          downBtn.classList.add('disabled');
+          if (feedbackType === 'down') {
+            upBtn.classList.remove('selected');
+            downBtn.classList.add('selected');
+          }
+          showToast('Feedback recorded. Thank you!', 'success');
+        } else {
+          showToast('Failed to record feedback.', 'error');
+        }
+      } catch (err) {
+        showToast('Error sending feedback.', 'error');
+      }
+    }
+
+    function appendMessage(role, content, extra = {}) {
+      const chatMessages = document.getElementById('chatMessages');
+
+      if (messages.length === 0) {
+        const welcome = chatMessages.querySelector('.welcome-message');
+        if (welcome) welcome.remove();
+      }
+
+      // Client-side safety net: if reason looks like JSON, parse it
+      if (extra.reason && extra.reason.trim().startsWith('{')) {
+        const clientParsed = tryParseJsonReason(extra.reason);
+        if (clientParsed) {
+          extra = { ...extra, ...clientParsed };
+        }
+      }
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${role}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+
+      if (role === 'assistant') {
+        const header = document.createElement('div');
+        header.className = 'message-header';
+        header.innerHTML = '<span class="message-sender">LoanAssist</span>';
+
+        if (extra.mode) {
+          const badge = document.createElement('span');
+          badge.className = `message-badge ${extra.mode}`;
+          badge.textContent = extra.mode === 'rag' ? 'RAG' : 'Direct';
+          header.appendChild(badge);
+        }
+
+        bubble.appendChild(header);
+      }
+
+      // Structured card view
+      if (role === 'assistant' && extra.decision) {
+        const card = document.createElement('div');
+        card.className = 'decision-card';
+
+        // Card header with decision
+        const header = document.createElement('div');
+        header.className = `decision-card-header ${extra.decision}`;
+        const isApprove = extra.decision === 'approve';
+        header.innerHTML = `
+          <div class="header-left">
+            <div class="header-icon">${isApprove ? '✓' : '✕'}</div>
+            <div class="header-title">${isApprove ? 'Loan Approved' : 'Loan Rejected'}</div>
+          </div>
+        `;
+        card.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'decision-card-body';
+
+        // Confidence
+        if (extra.confidence) {
+          const confDiv = document.createElement('div');
+          confDiv.className = `confidence-badge ${extra.confidence}`;
+          confDiv.textContent = `${extra.confidence} confidence`;
+          body.appendChild(confDiv);
+        }
+
+        // Reason
+        if (extra.reason) {
+          const section = document.createElement('div');
+          section.className = 'decision-section';
+          section.innerHTML = `
+            <div class="section-label">Reasoning</div>
+            <div class="decision-reason">${sanitizeText(extra.reason)}</div>
+          `;
+          body.appendChild(section);
+        }
+
+        // Comparison summary
+        if (extra.comparison_summary) {
+          const section = document.createElement('div');
+          section.className = 'decision-section';
+          section.innerHTML = `
+            <div class="section-label">Comparison</div>
+            <div class="decision-comparison">${sanitizeText(extra.comparison_summary)}</div>
+          `;
+          body.appendChild(section);
+        }
+
+        // Risk factors
+        if (extra.risk_factors && extra.risk_factors.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'decision-section';
+          let riskHtml = '<div class="section-label">Risk Factors</div><ul>';
+          extra.risk_factors.forEach(rf => {
+            riskHtml += `<li>${sanitizeText(rf)}</li>`;
+          });
+          riskHtml += '</ul>';
+          section.innerHTML = riskHtml;
+          section.querySelector('ul').className = 'decision-risks';
+          body.appendChild(section);
+        }
+
+        // Cited cases
+        if (extra.cited_case_ids && extra.cited_case_ids.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'decision-section';
+          let citeHtml = '<div class="section-label">Based on Historical Cases</div><div class="decision-citations">';
+          extra.cited_case_ids.forEach(cid => {
+            citeHtml += `<span class="citation-tag">#${cid}</span>`;
+          });
+          citeHtml += '</div>';
+          section.innerHTML = citeHtml;
+          body.appendChild(section);
+        }
+
+        card.appendChild(body);
+        bubble.appendChild(card);
+
+        // Feedback buttons
+        if (extra.question && extra.decision) {
+          const feedbackDiv = document.createElement('div');
+          feedbackDiv.className = 'feedback-bar';
+
+          const upBtn = document.createElement('button');
+          upBtn.className = 'feedback-btn up';
+          upBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg> Helpful`;
+          upBtn.onclick = () => submitFeedback(extra, 'up', upBtn, downBtn);
+
+          const downBtn = document.createElement('button');
+          downBtn.className = 'feedback-btn down';
+          downBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg> Not Helpful`;
+          downBtn.onclick = () => submitFeedback(extra, 'down', upBtn, downBtn);
+
+          feedbackDiv.appendChild(upBtn);
+          feedbackDiv.appendChild(downBtn);
+          bubble.appendChild(feedbackDiv);
+        }
+      } else {
+        // Fallback plain text
+        const text = document.createElement('div');
+        text.className = 'message-text';
+        text.textContent = sanitizeText(content);
+        bubble.appendChild(text);
+      }
+
+      if (role === 'assistant' && extra.question) {
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'export-btn';
+        exportBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Export PDF`;
+        exportBtn.onclick = function() {
+          exportDecision(extra.question, content, extra.context || [], extra.mode || 'direct');
+        };
+        bubble.appendChild(exportBtn);
+      }
+
+      if (extra.context && extra.context.length > 0) {
+        const ctxToggle = document.createElement('button');
+        ctxToggle.className = 'context-toggle';
+        ctxToggle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> View ${extra.context.length} RAG Retrieved Cases`;
+        ctxToggle.onclick = function() {
+          const ctxDiv = this.nextElementSibling;
+          const isHidden = ctxDiv.style.display === 'none';
+          ctxDiv.style.display = isHidden ? 'block' : 'none';
+          this.innerHTML = isHidden
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Hide RAG Retrieved Cases`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> View ${extra.context.length} RAG Retrieved Cases`;
+        };
+        bubble.appendChild(ctxToggle);
+
+        const ctxDiv = document.createElement('div');
+        ctxDiv.className = 'context-section';
+        ctxDiv.style.display = 'none';
+
+        const ctxHeader = document.createElement('div');
+        ctxHeader.className = 'context-header';
+        ctxHeader.textContent = `Retrieved ${extra.context.length} similar cases via RAG:`;
+        ctxDiv.appendChild(ctxHeader);
+
+        extra.context.forEach((item, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'context-item';
+          itemDiv.innerHTML = `<span class="context-num">#${idx + 1}</span> ${item}`;
+          ctxDiv.appendChild(itemDiv);
+        });
+        bubble.appendChild(ctxDiv);
+      }
+
+      msgDiv.appendChild(bubble);
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_BASE}/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        document.getElementById('statTotal').textContent = data.total_queries;
+        document.getElementById('statRAG').textContent = data.rag_queries;
+        document.getElementById('statApprove').textContent = data.approve_count;
+        document.getElementById('statReject').textContent = data.reject_count;
+        document.getElementById('statAvg').textContent = data.avg_response_ms + 'ms';
+      } catch (e) {
+        // silently fail
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const question = input.value.trim();
+      if (!question || isProcessing) return;
+
+      isProcessing = true;
+      input.value = '';
+      updateCharCount();
+
+      appendMessage('user', question);
+      messages.push({ role: 'user', content: question });
+
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      document.getElementById('headerModeBadge').textContent = 'RAG Retrieving...';
+      document.getElementById('headerModeBadge').className = 'mode-badge thinking';
+      document.getElementById('ragStatus').textContent = 'RAG retrieval in progress...';
+
+      try {
+        const res = await fetch(`${API_BASE}/query`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ question, history: messages.slice(0, -1) })
+        });
+
+        if (res.status === 401) {
+          showToast('Session expired. Please log in again.', 'error');
+          logout();
+          return;
+        }
+
+        const data = await res.json();
+
+        appendMessage('assistant', data.answer, {
+          mode: data.mode,
+          context: data.context,
+          question: data.question,
+          decision: data.decision,
+          confidence: data.confidence,
+          reason: data.reason,
+          cited_case_ids: data.cited_case_ids,
+          risk_factors: data.risk_factors,
+          comparison_summary: data.comparison_summary
+        });
+        messages.push({ role: 'assistant', content: data.answer });
+
+        const badge = document.getElementById('headerModeBadge');
+        if (data.mode === 'rag') {
+          badge.textContent = 'RAG';
+          badge.className = 'mode-badge rag';
+          document.getElementById('ragStatus').textContent = 'RAG retrieval complete';
+        } else {
+          badge.textContent = 'Direct';
+          badge.className = 'mode-badge direct';
+          document.getElementById('ragStatus').textContent = 'Direct response (no RAG)';
+        }
+
+        fetchStats();
+      } catch (err) {
+        appendMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        messages.push({ role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' });
+        document.getElementById('headerModeBadge').textContent = 'Error';
+        document.getElementById('headerModeBadge').className = 'mode-badge error';
+        document.getElementById('ragStatus').textContent = 'Error occurred';
+      } finally {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        isProcessing = false;
+      }
+    }
+
+    async function exportDecision(question, answer, context, mode) {
+      try {
+        const res = await fetch(`${API_BASE}/export-decision`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ question, history: [] })
+        });
+
+        if (!res.ok) {
+          showToast('Failed to generate PDF', 'error');
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `loan_decision_${new Date().getTime()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showToast('PDF exported successfully', 'success');
+      } catch (err) {
+        showToast('Error exporting PDF: ' + err.message, 'error');
+      }
+    }
+
+    function showPanel(panel) {
+      closeToolsDrawer();
+      document.querySelectorAll('.rail-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    function toggleToolsDrawer(tool) {
+      const drawer = document.getElementById('toolsDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      const calcSection = document.getElementById('calculatorSection');
+      const batchSection = document.getElementById('batchSection');
+      const title = document.getElementById('drawerTitle');
+
+      if (tool === 'calculator') {
+        calcSection.style.display = 'block';
+        batchSection.style.display = 'none';
+        title.textContent = 'Repayment Calculator';
+      } else {
+        calcSection.style.display = 'none';
+        batchSection.style.display = 'block';
+        title.textContent = 'Batch Processing';
+      }
+
+      drawer.classList.add('open');
+      backdrop.classList.add('show');
+    }
+
+    function closeToolsDrawer() {
+      document.getElementById('toolsDrawer').classList.remove('open');
+      document.getElementById('drawerBackdrop').classList.remove('show');
+    }
+
+    async function calculateSchedule() {
+      const amount = parseInt(document.getElementById('calcAmount').value);
+      const rate = parseFloat(document.getElementById('calcRate').value);
+      const term = parseInt(document.getElementById('calcTerm').value);
+
+      if (!amount || !rate || !term) {
+        showToast('Please fill in all fields', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/calculate-schedule`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ loan_amount_ugx: amount, interest_rate_annual: rate, term_months: term })
+        });
+
+        const data = await res.json();
+        
+        document.getElementById('calcMonthly').textContent = `UGX ${data.monthly_payment.toLocaleString()}`;
+        document.getElementById('calcTotal').textContent = `UGX ${data.total_repayment.toLocaleString()}`;
+        document.getElementById('calcInterest').textContent = `UGX ${data.total_interest.toLocaleString()}`;
+        
+        const tbody = document.querySelector('#scheduleTable tbody');
+        tbody.innerHTML = '';
+        
+        data.schedule.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${row.month}</td>
+            <td>UGX ${row.payment.toLocaleString()}</td>
+            <td>UGX ${row.principal.toLocaleString()}</td>
+            <td>UGX ${row.interest.toLocaleString()}</td>
+            <td>UGX ${row.balance.toLocaleString()}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        document.getElementById('calcResults').style.display = 'block';
+      } catch (err) {
+        showToast('Error calculating schedule: ' + err.message, 'error');
+      }
+    }
+
+    async function processBatch() {
+      const fileInput = document.getElementById('batchFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showToast('Please select a CSV file', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      
+      try {
+        const res = await fetch(`${API_BASE}/batch-process`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await res.json();
+        
+        document.getElementById('batchStats').innerHTML = `
+          <span class="batch-stat">Total: ${data.total_processed}</span>
+        `;
+        
+        const tbody = document.querySelector('#batchTable tbody');
+        tbody.innerHTML = '';
+        
+        data.results.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${row.customer_id}</td>
+            <td><span class="decision-badge ${row.decision.toLowerCase()}">${row.decision}</span></td>
+            <td>${row.mode}</td>
+            <td class="batch-answer" title="${row.answer}">${row.answer.substring(0, 80)}...</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        document.getElementById('batchResults').style.display = 'block';
+      } catch (err) {
+        showToast('Error processing batch: ' + err.message, 'error');
+      } finally {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+      }
+    }
+
+    function updateCharCount() {
+      const len = document.getElementById('messageInput').value.length;
+      document.getElementById('charCount').textContent = len + ' characters';
+    }
+
+    document.getElementById('messageInput').addEventListener('input', updateCharCount);
+    document.getElementById('messageInput').addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>

@@ -1,2 +1,31 @@
-fastapi
-uvicorn[standard]
+# Core framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Auth & security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Data & validation
+pydantic>=2.5.0
+pandas>=2.1.0
+
+# PDF generation
+fpdf>=1.7.2
+
+# LangChain & RAG
+langchain-core>=0.1.0
+langchain-text-splitters>=0.0.1
+langchain-community>=0.0.10
+langchain-ollama>=0.0.1
+langchain-huggingface>=0.0.1
+
+# Embeddings & vector store
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# Hybrid retrieval
+rank-bm25>=0.2.0
+
+# HTTP client (for Ollama)
+httpx>=0.25.0

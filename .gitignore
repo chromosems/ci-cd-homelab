@@ -19,3 +19,13 @@ htmlcov/
 # Environments
 .venv/
 venv/
+
+# Runtime data (do not commit generated DB or rebuilt index)
+data/*.db
+data/*.db-journal
+
+# Secrets
+.env
+
+# Docker
+.dockerignore
