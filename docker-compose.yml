@@ -4,4 +4,4 @@ services:
     container_name: ci-cd-homelab
     ports:
       - "80:8000"
-      restart: unless-stopped
+    restart: unless-stopped
