@@ -53,9 +53,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create .env file
+        run: |
+          cat << 'EOF' > .env
+          OLLAMA_BASE_URL=https://soft-consequently-coleman-custody.trycloudflare.com
+          SECRET_KEY=demo-secret-change-in-production
+          LOANS_CSV=data/loans.csv
+          FAISS_INDEX_PATH=data/faiss_index
+          LOANASSIST_DB=data/loanassist.db
+          OLLAMA_MODEL=qwen3:8b
+          FALLBACK_MODEL=loan-qwen
+          CACHE_SIZE=128
+          EOF
+
       - name: Deploy with Docker Compose
         run: |
+          docker stop ci-cd-homelab || true
+          docker rm ci-cd-homelab || true
           docker compose down || true
           docker compose up --build -d
-          sleep 10
+          sleep 15
           curl -f http://localhost/health || exit 1
