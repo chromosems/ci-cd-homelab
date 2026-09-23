@@ -415,26 +415,36 @@ except ImportError:
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://192.168.222.1:11434")
 
-# Try primary model, fallback if unavailable
+# Lazy LLM initialization — app can start even if Ollama is unreachable
 llm = None
 active_model = MODEL_NAME
+_llm_initialized = False
 
-try:
-    print(f"[Startup] Loading Ollama model ({MODEL_NAME}) from {OLLAMA_BASE_URL}...")
-    llm = OllamaLLM(
-        model=MODEL_NAME,
-        base_url=OLLAMA_BASE_URL,
-        temperature=0.3,
-        num_ctx=8192,
-        num_predict=2000,
-    )
-    # Test invocation
-    llm.invoke("Hi")
-    print(f"[Startup] Model {MODEL_NAME} loaded successfully.")
-except Exception as e:
-    print(f"[Startup] Warning: Could not load {MODEL_NAME}: {e}")
-    print(f"[Startup] Falling back to {FALLBACK_MODEL}...")
+
+def _init_llm():
+    """Lazy-initialize Ollama LLM with fallback. Safe to call multiple times."""
+    global llm, active_model, _llm_initialized
+    if _llm_initialized:
+        return
+
     try:
+        print(f"[Startup] Loading Ollama model ({MODEL_NAME}) from {OLLAMA_BASE_URL}...")
+        llm = OllamaLLM(
+            model=MODEL_NAME,
+            base_url=OLLAMA_BASE_URL,
+            temperature=0.3,
+            num_ctx=8192,
+            num_predict=2000,
+        )
+        llm.invoke("Hi")
+        print(f"[Startup] Model {MODEL_NAME} loaded successfully.")
+        _llm_initialized = True
+        return
+    except Exception as e:
+        print(f"[Startup] Warning: Could not load {MODEL_NAME}: {e}")
+
+    try:
+        print(f"[Startup] Falling back to {FALLBACK_MODEL}...")
         llm = OllamaLLM(
             model=FALLBACK_MODEL,
             base_url=OLLAMA_BASE_URL,
@@ -443,11 +453,19 @@ except Exception as e:
         )
         active_model = FALLBACK_MODEL
         print(f"[Startup] Fallback model {FALLBACK_MODEL} loaded.")
+        _llm_initialized = True
+        return
     except Exception as e2:
         print(f"[Startup] Error: Could not load any model: {e2}")
-        raise
+        # Do NOT raise — let the app start so /health works
+        llm = None
 
-assert llm is not None
+
+def _ensure_llm():
+    """Ensure LLM is ready before invoking. Raises if unavailable."""
+    _init_llm()
+    if llm is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable. Please check Ollama connectivity.")
 
 
 # ---------------------------------------------------------------------------
@@ -456,11 +474,13 @@ assert llm is not None
 @lru_cache(maxsize=CACHE_SIZE)
 def _cached_llm_invoke(prompt_hash: str) -> str:
     """Cached LLM call. Accepts hash string to keep args hashable."""
+    _ensure_llm()
     return llm.invoke(prompt_hash)  # type: ignore[union-attr]
 
 
 def invoke_llm(prompt: str) -> str:
     """Invoke LLM with in-memory caching."""
+    _ensure_llm()
     result = _cached_llm_invoke(prompt)
     if not result or not result.strip():
         # Empty cached result — evict and retry once

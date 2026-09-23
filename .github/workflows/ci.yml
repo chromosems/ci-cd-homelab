@@ -55,6 +55,7 @@ jobs:
 
       - name: Deploy with Docker Compose
         run: |
+          docker compose down || true
           docker compose up --build -d
-          sleep 5
+          sleep 10
           curl -f http://localhost/health || exit 1
